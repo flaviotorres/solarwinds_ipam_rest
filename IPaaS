@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+#
+# IPaaS		This shell script takes care of starting and stopping
+#               IPaaS Service.
+# Version	1, May/2014
+# chkconfig: 2345 95 55
+
+APP_PATH=/root
+APP=IPaaS.py
+LOCK=/var/lock/subsys/${APP%.py}
+
+# Source function library.
+if [ -f /etc/init.d/functions ]; then
+  . /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ]; then
+  . /etc/rc.d/init.d/functions
+else
+  echo "Could not find functions file, your system may be broken"
+  exit 1
+fi
+
+# Source networking configuration.
+if [ -f "/etc/sysconfig/network" ] ; then
+        . /etc/sysconfig/network
+fi
+
+# Check that networking is up.
+[ ${NETWORKING} = "no" ] && exit 0
+
+
+case "$1" in
+  start)
+    if [ -f ${LOCK} ];then
+      echo "Lock file exists: $LOCK" 
+      exit 0
+    else
+      # Start daemons.
+      echo -n "Starting IPaaS: "
+      nohup ${APP_PATH}/${APP} &
+      echo_success
+      echo
+      touch /var/lock/subsys/${APP%.py}
+    fi
+    ;;
+  stop)
+    # Stop daemons.
+    echo -n "Shutting down IPaaS: "
+    IP_PID=$(ps -efwww|grep IPaaS|egrep -v '(grep|init.d)' | awk '{print $2}'| tr '\n' ' ')
+    [[ "$IP_PID" ]] && kill -15 $IP_PID
+    echo_success
+    echo
+    rm -f /var/lock/subsys/${APP%.py}
+    ;;
+  *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+esac
+exit 0
+
